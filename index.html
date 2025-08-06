@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FarmFun - Mint Your Tokens</title>
+
+    <!-- === META TAGS UNTUK FARCASTER FRAME (SUDAH DIISI) === -->
+    <meta property="fc:frame" content="vNext" />
+    <meta property="fc:frame:image" content="https://i.imgur.com/v8tTj8p.png" />
+    <meta property="og:image" content="https://i.imgur.com/v8tTj8p.png" />
+    <meta property="fc:frame:button:1" content="Start Farming!" />
+    <!-- ======================================================= -->
+
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: #0d1b2a; 
+        }
+        .btn-primary {
+            transition: transform 0.2s ease-in-out, background-color 0.2s ease-in-out;
+        }
+        .btn-primary:hover {
+            transform: scale(1.05);
+        }
+        .btn-primary:disabled {
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+        :root {
+          --w3m-z-index: 1000;
+        }
+    </style>
+</head>
+<body class="text-white flex items-center justify-center min-h-screen p-4">
+
+    <div id="app" class="w-full max-w-md bg-[#1b263b] rounded-2xl shadow-lg p-6 space-y-6">
+        
+        <header class="text-center">
+            <h1 class="text-4xl font-bold text-cyan-300">FarmFun</h1>
+            <p class="text-cyan-400 mt-1">Mint your $FARM token</p>
+        </header>
+
+        <div id="connect-wallet-section" class="text-center">
+            <p class="mb-4">Connect your wallet to start farming.</p>
+            <button id="connect-wallet-btn" class="btn-primary w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg">
+                Connect Wallet
+            </button>
+        </div>
+
+        <main id="main-content" class="hidden space-y-6">
+            <div class="bg-slate-800/50 p-4 rounded-lg text-center">
+                <p class="text-sm text-gray-400">Available to Mint</p>
+                <p id="mintable-amount" class="text-3xl font-bold text-teal-300">0.00</p>
+                <p class="text-sm text-gray-400">$FARM</p>
+                <button id="mint-btn" class="btn-primary w-full mt-4 bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg" disabled>
+                    Mint Now
+                </button>
+            </div>
+
+            <div class="bg-slate-800/50 p-4 rounded-lg text-center">
+                <p class="text-sm text-gray-400">Your Balance</p>
+                <p id="user-balance" class="text-3xl font-bold">0.00</p>
+                <p class="text-sm text-gray-400">$FARM</p>
+            </div>
+            
+            <div>
+                 <a id="buy-swap-link" href="#" target="_blank" rel="noopener noreferrer" class="btn-primary block w-full bg-sky-500 hover:bg-sky-600 text-white font-bold py-3 px-4 rounded-lg text-center">
+                    Buy / Swap Token
+                </a>
+            </div>
+
+            <div class="text-center pt-4 border-t border-gray-700">
+                <p class="text-xs text-gray-400">Connected Wallet:</p>
+                <p id="wallet-address" class="text-xs font-mono break-all"></p>
+                <button id="disconnect-btn" class="text-xs text-red-400 hover:underline mt-2">Disconnect</button>
+            </div>
+        </main>
+
+        <div id="message-area" class="text-center text-sm p-2 rounded-lg hidden"></div>
+    </div>
+
+    <script type="module">
+        import { createWeb3Modal, ethers5Adapter } from 'https://esm.sh/@web3modal/ethers5@3.5.1';
+        import { walletConnectProvider, EIP6963Connector } from 'https://esm.sh/@web3modal/ethers5@3.5.1/connectors';
+
+        // --- 1. PENGATURAN AWAL (SUDAH DIISI) ---
+        const contractAddress = "0xFc874ddbEffd695135c238E9165263d60c00eD43";
+        const projectId = 'bfde9cc6aea449b4751743e45b6fb6dd';
+
+        const contractABI = [
+            "function userInfo(address _user) public view returns (uint256[] memory)",
+            "function mint() public",
+            "event TimeMinted(address indexed user, uint256 supply, uint256 balance, uint256 mintable, uint256 minted, uint256 timestamp_lastminted, uint256 timestamp_current)"
+        ];
+
+        const metadata = {
+            name: 'FarmFun',
+            description: 'Mint $FARM tokens on FarmFun',
+            url: 'https://degenapp.store/', 
+            icons: ['https://sec.degenapp.store/sec/images/logo-dark-256.png']
+        };
+
+        const base = {
+            chainId: 8453,
+            name: 'Base',
+            currency: 'ETH',
+            explorerUrl: 'https://basescan.org',
+            rpcUrl: 'https://mainnet.base.org'
+        };
+
+        // --- 2. INISIALISASI WEB3MODAL ---
+        const modal = createWeb3Modal({
+            ethersConfig: ethers5Adapter({
+                metadata,
+                connectors: [walletConnectProvider({ projectId }), new EIP6963Connector()]
+            }),
+            chains: [base],
+            projectId,
+            enableAnalytics: true,
+            themeMode: 'dark',
+            themeVariables: {
+                '--w3m-accent': '#38bdf8',
+                '--w3m-border-radius-master': '1rem'
+            }
+        });
+
+        // --- 3. STATE APLIKASI DAN ELEMEN DOM ---
+        let contract, signer, userAddress;
+        let dataFetchInterval;
+
+        const connectWalletBtn = document.getElementById('connect-wallet-btn');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const connectWalletSection = document.getElementById('connect-wallet-section');
+        const mainContent = document.getElementById('main-content');
+        const mintBtn = document.getElementById('mint-btn');
+        const buySwapLink = document.getElementById('buy-swap-link');
+        const userBalanceEl = document.getElementById('user-balance');
+        const mintableAmountEl = document.getElementById('mintable-amount');
+        const walletAddressEl = document.getElementById('wallet-address');
+        const messageArea = document.getElementById('message-area');
+        
+        // --- 4. LOGIKA UTAMA & EVENT LISTENERS ---
+        document.addEventListener('DOMContentLoaded', () => {
+            buySwapLink.href = `https://app.uniswap.org/swap?outputCurrency=${contractAddress}&chain=base`;
+            connectWalletBtn.addEventListener('click', () => modal.open());
+            disconnectBtn.addEventListener('click', () => modal.disconnect());
+            mintBtn.addEventListener('click', mintTokens);
+
+            modal.subscribeState(state => {
+                if (state.open === false) {
+                     handleConnectionState();
+                }
+            });
+            handleConnectionState();
+        });
+
+        async function handleConnectionState() {
+            if (modal.getIsConnected()) {
+                await onConnect();
+            } else {
+                onDisconnect();
+            }
+        }
+
+        async function onConnect() {
+            try {
+                const provider = modal.getWalletProvider();
+                const ethersProvider = new ethers5Adapter.Ethers5Provider(provider);
+                signer = await ethersProvider.getSigner();
+                userAddress = modal.getAddress();
+                
+                contract = new ethers5Adapter.Ethers5Contract(contractAddress, contractABI, signer);
+
+                walletAddressEl.textContent = userAddress;
+                connectWalletSection.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+                
+                await updateUserInfo();
+                if (dataFetchInterval) clearInterval(dataFetchInterval);
+                dataFetchInterval = setInterval(updateUserInfo, 15000);
+
+            } catch (error) {
+                console.error("Initialization failed after connect:", error);
+                showMessage('Failed to set up the app. Please try reconnecting.', 'error');
+            }
+        }
+
+        function onDisconnect() {
+            if (dataFetchInterval) clearInterval(dataFetchInterval);
+            mainContent.classList.add('hidden');
+            connectWalletSection.classList.remove('hidden');
+            userAddress = null;
+            signer = null;
+            contract = null;
+        }
+
+        async function updateUserInfo() {
+            if (!contract || !userAddress) return;
+            try {
+                const userInfoArray = await contract.userInfo(userAddress);
+                const balance = userInfoArray[1];
+                const mintable = userInfoArray[3];
+                const formattedBalance = parseFloat(ethers5Adapter.formatUnits(balance, 18)).toFixed(2);
+                const formattedMintable = parseFloat(ethers5Adapter.formatUnits(mintable, 0));
+
+                userBalanceEl.textContent = formattedBalance;
+                mintableAmountEl.textContent = formattedMintable.toFixed(2);
+
+                if (formattedMintable > 0) {
+                    mintBtn.disabled = false;
+                    mintBtn.textContent = 'Mint Now';
+                } else {
+                    mintBtn.disabled = true;
+                    mintBtn.textContent = 'Nothing to Mint';
+                }
+            } catch (error) {
+                console.error("Error fetching user info:", error);
+                showMessage('Could not fetch your token data.',. 'error');
+            }
+        }
+
+        async function mintTokens() {
+            if (!contract) return;
+            mintBtn.disabled = true;
+            mintBtn.textContent = 'Minting...';
+            showMessage('Please confirm the transaction in your wallet.', 'info');
+            try {
+                const tx = await contract.mint();
+                showMessage('Transaction sent! Waiting for confirmation...', 'info');
+                await tx.wait();
+                showMessage('Successfully minted!', 'success');
+                await updateUserInfo();
+            } catch (error) {
+                console.error("Minting failed:", error);
+                const reason = error.reason || 'Transaction failed. Please try again.';
+                showMessage(reason, 'error');
+                setTimeout(updateUserInfo, 2000);
+            }
+        }
+
+        function showMessage(text, type) {
+            messageArea.textContent = text;
+            messageArea.className = 'text-center text-sm p-2 rounded-lg';
+            if (type === 'success') messageArea.classList.add('bg-teal-500');
+            else if (type === 'error') messageArea.classList.add('bg-red-500');
+            else messageArea.classList.add('bg-sky-500');
+            setTimeout(() => { messageArea.className = 'text-center text-sm p-2 rounded-lg hidden'; }, 5000);
+        }
+    </script>
+</body>
+</html>
