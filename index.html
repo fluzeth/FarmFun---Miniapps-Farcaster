@@ -5,11 +5,16 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FarmFun - Mint Your Tokens</title>
 
-    <!-- === META TAGS UNTUK FARCASTER FRAME (SUDAH DIISI) === -->
+    <!-- === META TAGS UNTUK FARCASTER FRAME (DIPERBARUI) === -->
+    <!-- Memberi tahu Farcaster bahwa ini adalah Frame -->
     <meta property="fc:frame" content="vNext" />
+    <!-- Gambar pratinjau yang muncul di feed -->
     <meta property="fc:frame:image" content="https://i.imgur.com/v8tTj8p.png" />
     <meta property="og:image" content="https://i.imgur.com/v8tTj8p.png" />
-    <meta property="fc:frame:button:1" content="Start Farming!" />
+    <!-- Tombol 1: Teks yang ditampilkan -->
+    <meta property="fc:frame:button:1" content="Launch FarmFun App" />
+    <!-- Tombol 1: Aksi -> Buka link (ini bagian penting yang diperbaiki) -->
+    <meta property="fc:frame:button:1:action" content="link" />
     <!-- ======================================================= -->
 
     <!-- Tailwind CSS for styling -->
