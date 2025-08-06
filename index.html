@@ -5,16 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FarmFun - Mint Your Tokens</title>
 
-    <!-- === META TAGS UNTUK FARCASTER FRAME (DIPERBARUI) === -->
+    <!-- === META TAGS UNTUK FARCASTER FRAME === -->
     <meta property="fc:frame" content="vNext" />
     <meta property="fc:frame:image" content="https://i.imgur.com/v8tTj8p.png" />
     <meta property="og:image" content="https://i.imgur.com/v8tTj8p.png" />
     <meta property="fc:frame:button:1" content="Launch FarmFun App" />
     <meta property="fc:frame:button:1:action" content="link" />
     <!-- ======================================================= -->
-
-    <!-- Farcaster Mini Apps SDK (BARU DITAMBAHKAN) -->
-    <script src="https://farcaster.xyz/miniapps/sdk.js"></script>
 
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -88,8 +85,10 @@
     </div>
 
     <script type="module">
+        // (BARU) Mengimpor semua dependensi di satu tempat
         import { createWeb3Modal, ethers5Adapter } from 'https://esm.sh/@web3modal/ethers5@3.5.1';
         import { walletConnectProvider, EIP6963Connector } from 'https://esm.sh/@web3modal/ethers5@3.5.1/connectors';
+        import { sdk } from 'https://esm.sh/@farcaster/miniapp-sdk';
 
         // --- 1. PENGATURAN AWAL (SUDAH DIISI) ---
         const contractAddress = "0xFc874ddbEffd695135c238E9165263d60c00eD43";
@@ -148,12 +147,7 @@
         const messageArea = document.getElementById('message-area');
         
         // --- 4. LOGIKA UTAMA & EVENT LISTENERS ---
-        document.addEventListener('DOMContentLoaded', () => {
-            // (BARU) Inisialisasi Farcaster SDK
-            if (window.farcaster && window.farcaster.sdk) {
-                window.farcaster.sdk.init();
-            }
-
+        async function main() {
             buySwapLink.href = `https://app.uniswap.org/swap?outputCurrency=${contractAddress}&chain=base`;
             connectWalletBtn.addEventListener('click', () => modal.open());
             disconnectBtn.addEventListener('click', () => modal.disconnect());
@@ -166,11 +160,12 @@
             });
             handleConnectionState();
 
-            // (BARU) Memberi tahu Farcaster bahwa aplikasi sudah siap
-            if (window.farcaster && window.farcaster.sdk) {
-                window.farcaster.sdk.actions.ready();
-            }
-        });
+            // (BARU & DIPERBAIKI) Memberi tahu Farcaster bahwa aplikasi sudah siap
+            await sdk.actions.ready();
+        }
+
+        // Jalankan fungsi utama setelah DOM dimuat
+        document.addEventListener('DOMContentLoaded', main);
 
         async function handleConnectionState() {
             if (modal.getIsConnected()) {
@@ -233,7 +228,8 @@
                 }
             } catch (error) {
                 console.error("Error fetching user info:", error);
-                showMessage('Could not fetch your token data.',. 'error');
+                // (DIPERBAIKI) Menghapus titik ekstra
+                showMessage('Could not fetch your token data.', 'error');
             }
         }
 
