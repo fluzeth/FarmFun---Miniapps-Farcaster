@@ -6,16 +6,15 @@
     <title>FarmFun - Mint Your Tokens</title>
 
     <!-- === META TAGS UNTUK FARCASTER FRAME (DIPERBARUI) === -->
-    <!-- Memberi tahu Farcaster bahwa ini adalah Frame -->
     <meta property="fc:frame" content="vNext" />
-    <!-- Gambar pratinjau yang muncul di feed -->
     <meta property="fc:frame:image" content="https://i.imgur.com/v8tTj8p.png" />
     <meta property="og:image" content="https://i.imgur.com/v8tTj8p.png" />
-    <!-- Tombol 1: Teks yang ditampilkan -->
     <meta property="fc:frame:button:1" content="Launch FarmFun App" />
-    <!-- Tombol 1: Aksi -> Buka link (ini bagian penting yang diperbaiki) -->
     <meta property="fc:frame:button:1:action" content="link" />
     <!-- ======================================================= -->
+
+    <!-- Farcaster Mini Apps SDK (BARU DITAMBAHKAN) -->
+    <script src="https://farcaster.xyz/miniapps/sdk.js"></script>
 
     <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -150,6 +149,11 @@
         
         // --- 4. LOGIKA UTAMA & EVENT LISTENERS ---
         document.addEventListener('DOMContentLoaded', () => {
+            // (BARU) Inisialisasi Farcaster SDK
+            if (window.farcaster && window.farcaster.sdk) {
+                window.farcaster.sdk.init();
+            }
+
             buySwapLink.href = `https://app.uniswap.org/swap?outputCurrency=${contractAddress}&chain=base`;
             connectWalletBtn.addEventListener('click', () => modal.open());
             disconnectBtn.addEventListener('click', () => modal.disconnect());
@@ -161,6 +165,11 @@
                 }
             });
             handleConnectionState();
+
+            // (BARU) Memberi tahu Farcaster bahwa aplikasi sudah siap
+            if (window.farcaster && window.farcaster.sdk) {
+                window.farcaster.sdk.actions.ready();
+            }
         });
 
         async function handleConnectionState() {
